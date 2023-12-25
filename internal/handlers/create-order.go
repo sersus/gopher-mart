@@ -44,7 +44,7 @@ func CreateOrderHandler(res http.ResponseWriter, req *http.Request) {
 
 	wg.Add(1)
 
-	go clients.GetOrdersAccruals([]int64{requestOrderID}, accruals, &wg)
+	go clients.GetOrdersAccruals([]int64{requestOrderID}, &accruals, &wg)
 
 	wg.Wait()
 

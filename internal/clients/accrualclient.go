@@ -33,13 +33,13 @@ type OrderAccrualResponse struct {
 	Error        error
 }
 
-func GetOrdersAccruals(orderIDs []int64, accrualResponses []OrderAccrualResponse, wg *sync.WaitGroup) {
+func GetOrdersAccruals(orderIDs []int64, accrualResponses *[]OrderAccrualResponse, wg *sync.WaitGroup) {
 	for i := 0; i < len(orderIDs); i++ {
 		go GetOrderAccrual(orderIDs[i], accrualResponses, wg)
 	}
 }
 
-func GetOrderAccrual(orderID int64, orderAccrualResponses []OrderAccrualResponse, wg *sync.WaitGroup) {
+func GetOrderAccrual(orderID int64, orderAccrualResponses *[]OrderAccrualResponse, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	var m sync.Mutex
@@ -52,14 +52,14 @@ func GetOrderAccrual(orderID int64, orderAccrualResponses []OrderAccrualResponse
 
 	if responseErr != nil {
 		m.Lock()
-		orderAccrualResponses = append(orderAccrualResponses, OrderAccrualResponse{Error: responseErr})
+		*orderAccrualResponses = append(*orderAccrualResponses, OrderAccrualResponse{Error: responseErr})
 		m.Unlock()
 		return
 	}
 
 	if response.StatusCode == http.StatusInternalServerError {
 		m.Lock()
-		orderAccrualResponses = append(orderAccrualResponses, OrderAccrualResponse{Code: http.StatusInternalServerError, Error: errors.New("error in the points calculation system")})
+		*orderAccrualResponses = append(*orderAccrualResponses, OrderAccrualResponse{Code: http.StatusInternalServerError, Error: errors.New("error in the points calculation system")})
 		m.Unlock()
 		return
 	}
@@ -68,7 +68,7 @@ func GetOrderAccrual(orderID int64, orderAccrualResponses []OrderAccrualResponse
 		stringOrderID := strconv.FormatInt(orderID, 10)
 
 		m.Lock()
-		orderAccrualResponses = append(orderAccrualResponses, OrderAccrualResponse{Code: http.StatusNoContent, OrderAccrual: &OrderAccrual{OrderID: stringOrderID, AccrualValue: 0, Status: NEW}})
+		*orderAccrualResponses = append(*orderAccrualResponses, OrderAccrualResponse{Code: http.StatusNoContent, OrderAccrual: &OrderAccrual{OrderID: stringOrderID, AccrualValue: 0, Status: NEW}})
 		m.Unlock()
 		return
 	}
@@ -79,7 +79,7 @@ func GetOrderAccrual(orderID int64, orderAccrualResponses []OrderAccrualResponse
 		delay, err := strconv.ParseInt(response.Header.Get("Retry-After"), 10, 64)
 		if err != nil {
 			m.Lock()
-			orderAccrualResponses = append(orderAccrualResponses, OrderAccrualResponse{Error: err, Code: http.StatusTooManyRequests})
+			*orderAccrualResponses = append(*orderAccrualResponses, OrderAccrualResponse{Error: err, Code: http.StatusTooManyRequests})
 			m.Unlock()
 			return
 		}
@@ -98,7 +98,7 @@ func GetOrderAccrual(orderID int64, orderAccrualResponses []OrderAccrualResponse
 	if readAllError != nil {
 		fmt.Println(readAllError)
 		m.Lock()
-		orderAccrualResponses = append(orderAccrualResponses, OrderAccrualResponse{Error: readAllError})
+		*orderAccrualResponses = append(*orderAccrualResponses, OrderAccrualResponse{Error: readAllError})
 		m.Unlock()
 		return
 	}
@@ -107,12 +107,12 @@ func GetOrderAccrual(orderID int64, orderAccrualResponses []OrderAccrualResponse
 
 	if unmarshalErr := json.Unmarshal(bodyBytes, &accrual); unmarshalErr != nil {
 		m.Lock()
-		orderAccrualResponses = append(orderAccrualResponses, OrderAccrualResponse{Error: unmarshalErr})
+		*orderAccrualResponses = append(*orderAccrualResponses, OrderAccrualResponse{Error: unmarshalErr})
 		m.Unlock()
 		return
 	}
 
 	m.Lock()
-	orderAccrualResponses = append(orderAccrualResponses, OrderAccrualResponse{OrderAccrual: &accrual, Code: response.StatusCode})
+	*orderAccrualResponses = append(*orderAccrualResponses, OrderAccrualResponse{OrderAccrual: &accrual, Code: response.StatusCode})
 	m.Unlock()
 }

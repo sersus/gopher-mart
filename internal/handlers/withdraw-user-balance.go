@@ -70,7 +70,7 @@ func WithdrawUserBalanceHandler(res http.ResponseWriter, req *http.Request) {
 
 	wg.Add(len(orderIDs))
 
-	go clients.GetOrdersAccruals(orderIDs, accruals, &wg)
+	go clients.GetOrdersAccruals(orderIDs, &accruals, &wg)
 
 	wg.Wait()
 
