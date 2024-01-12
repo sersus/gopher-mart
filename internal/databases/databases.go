@@ -113,7 +113,7 @@ func (client *DatabaseClient) OrderProcessing(res http.ResponseWriter, requestOr
 
 func (client *DatabaseClient) migrate() error {
 	_, err := client.DB.Exec(`
-		CREATE TABLE users IF NOT EXISTS
+		CREATE TABLE IF NOT EXISTS users
 		(
 			id BIGSERIAL PRIMARY KEY,
 			login TEXT NOT NULL,
@@ -126,7 +126,7 @@ func (client *DatabaseClient) migrate() error {
 	}
 
 	_, err = client.DB.Exec(`
-		CREATE TABLE orders IF NOT EXISTS
+		CREATE TABLE IF NOT EXISTS orders
 		(
 			id BIGSERIAL PRIMARY KEY,
 			userId BIGSERIAL
@@ -138,7 +138,7 @@ func (client *DatabaseClient) migrate() error {
 	}
 
 	_, err = client.DB.Exec(`
-		CREATE TABLE withdrawals IF NOT EXISTS
+		CREATE TABLE IF NOT EXISTS withdrawals 
 		(
 			id BIGSERIAL PRIMARY KEY,
 			userId BIGSERIAL,
