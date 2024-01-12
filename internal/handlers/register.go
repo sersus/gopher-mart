@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/sersus/gopher-mart/internal/auth"
@@ -11,8 +12,21 @@ import (
 
 func RegisterHandler(dbc *databases.DatabaseClient) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
+		/*if true {
+			newJwt, jwtError := auth.CreateJwtToken(1)
+			if jwtError != nil {
+				http.Error(res, jwtError.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			res.Header().Set(auth.AuthHeader, newJwt)
+			res.WriteHeader(http.StatusOK)
+			return
+		}*/
+
 		var unmarshalledBody credentialsBody
 
+		fmt.Println("register handler")
 		if err := unmarshalBody(req.Body, &unmarshalledBody); err != nil {
 			http.Error(res, err.Error(), http.StatusBadRequest)
 			return

@@ -68,7 +68,7 @@ func WithdrawUserBalanceHandler(dbc *databases.DatabaseClient) http.HandlerFunc 
 		current = current - withdrawalsSum
 
 		if unmarshalledBody.Sum > current {
-			http.Error(res, withdrawalsErrors.Error(), http.StatusPaymentRequired)
+			http.Error(res, "sum > current", http.StatusPaymentRequired)
 			return
 		}
 
