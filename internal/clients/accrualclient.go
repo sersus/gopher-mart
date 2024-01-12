@@ -32,7 +32,89 @@ type OrderAccrualResponse struct {
 	Code         int
 	Error        error
 }
+type AccrualClient struct {
+	Address  string
+	Client   *http.Client
+	Interval time.Duration
+}
 
+func NewAccrualClient(address string, interval time.Duration) *AccrualClient {
+	transport := &http.Transport{
+		// Настройка транспорта
+	}
+
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   15 * time.Second,
+	}
+
+	return &AccrualClient{
+		Address:  address,
+		Client:   client,
+		Interval: interval,
+	}
+}
+
+func (c *AccrualClient) GetOrdersAccruals(orderIDs []int64, accrualResponses *[]OrderAccrualResponse) {
+	var wg sync.WaitGroup
+
+	for _, orderID := range orderIDs {
+		wg.Add(1)
+		go func(id int64) {
+			defer wg.Done()
+			response, err := c.GetOrderAccrual(id)
+			if err != nil {
+				*accrualResponses = append(*accrualResponses, OrderAccrualResponse{Error: err})
+				return
+			}
+			*accrualResponses = append(*accrualResponses, *response)
+		}(orderID)
+	}
+
+	wg.Wait()
+}
+
+func (c *AccrualClient) GetOrderAccrual(orderID int64) (*OrderAccrualResponse, error) {
+	reqURL := fmt.Sprintf("%s/api/orders/%s", c.Address, strconv.FormatInt(orderID, 10))
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return &OrderAccrualResponse{Code: resp.StatusCode, Error: errors.New("non-ok status code received")}, nil
+	}
+
+	var accrual OrderAccrual
+	if err := json.NewDecoder(resp.Body).Decode(&accrual); err != nil {
+		return nil, err
+	}
+
+	return &OrderAccrualResponse{OrderAccrual: &accrual, Code: resp.StatusCode}, nil
+}
+
+func (c *AccrualClient) StartAccrualRoutine(orderIDs []int64) {
+	ticker := time.NewTicker(c.Interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			var accrualResponses []OrderAccrualResponse
+			c.GetOrdersAccruals(orderIDs, &accrualResponses)
+			// Обработка полученных данных о начислениях
+			// ...
+		}
+	}
+}
 func GetOrdersAccruals(orderIDs []int64, accrualResponses *[]OrderAccrualResponse, wg *sync.WaitGroup) {
 	for i := 0; i < len(orderIDs); i++ {
 		go GetOrderAccrual(orderIDs[i], accrualResponses, wg)

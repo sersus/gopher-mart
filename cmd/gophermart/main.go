@@ -10,21 +10,23 @@ import (
 )
 
 func main() {
-	if err := config.Configure(); err != nil {
+	var err error
+	if err = config.Configure(); err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
 
-	if err := databases.Init(config.DatabaseURI); err != nil {
+	var dbc *databases.DatabaseClient
+	if dbc, err = databases.NewDatabaseClient(config.DatabaseURI); err != nil {
 		fmt.Println(err)
 	}
 
 	server := &http.Server{
 		Addr:    config.RunAddress,
-		Handler: router.SetRoutes(),
+		Handler: router.SetRoutes(dbc),
 	}
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
