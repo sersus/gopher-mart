@@ -13,34 +13,36 @@ type WithdrawalJSON struct {
 	Sum   float64 `json:"sum"`
 }
 
-func GetWithdrawalsHandler(res http.ResponseWriter, req *http.Request) {
-	tokenClaims := req.Context().Value(auth.TokenClaimsContextFieldName).(*auth.TokenClaims)
+func GetWithdrawalsHandler(dbc *databases.DatabaseClient) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		tokenClaims := req.Context().Value(auth.TokenClaimsContextFieldName).(*auth.TokenClaims)
 
-	withdrawals, withdrawalsErrors := databases.GetWithdrawalsByUserID(tokenClaims.UserID)
-	if withdrawalsErrors != nil {
-		http.Error(res, withdrawalsErrors.Error(), http.StatusInternalServerError)
-		return
+		withdrawals, withdrawalsErrors := dbc.GetWithdrawalsByUserID(tokenClaims.UserID)
+		if withdrawalsErrors != nil {
+			http.Error(res, withdrawalsErrors.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		response := make([]WithdrawalJSON, 0)
+
+		for _, v := range *withdrawals {
+			response = append(response, WithdrawalJSON{Order: v.Order, Sum: v.Sum})
+		}
+
+		marshaledResp, err := json.Marshal(response)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		res.Header().Set("content-type", "application/json")
+
+		if len(response) == 0 {
+			res.WriteHeader(http.StatusNoContent)
+		} else {
+			res.WriteHeader(http.StatusOK)
+		}
+
+		res.Write(marshaledResp)
 	}
-
-	response := make([]WithdrawalJSON, 0)
-
-	for _, v := range *withdrawals {
-		response = append(response, WithdrawalJSON{Order: v.Order, Sum: v.Sum})
-	}
-
-	marshaledResp, err := json.Marshal(response)
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	res.Header().Set("content-type", "application/json")
-
-	if len(response) == 0 {
-		res.WriteHeader(http.StatusNoContent)
-	} else {
-		res.WriteHeader(http.StatusOK)
-	}
-
-	res.Write(marshaledResp)
 }
