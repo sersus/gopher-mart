@@ -23,7 +23,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    config.RunAddress,
-		Handler: router.SetRoutes(dbc),
+		Handler: router.New(dbc),
 	}
 
 	err = server.ListenAndServe()

@@ -8,7 +8,7 @@ import (
 	"github.com/sersus/gopher-mart/internal/handlers"
 )
 
-func SetRoutes(dbc *databases.DatabaseClient) *chi.Mux {
+func New(dbc *databases.DatabaseClient) *chi.Mux {
 	mux := chi.NewRouter()
 
 	mux.Post("/api/user/register", handlers.RegisterHandler(dbc))
